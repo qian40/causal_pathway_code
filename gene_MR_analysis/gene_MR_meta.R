@@ -1,15 +1,15 @@
 library(TwoSampleMR)
 
 meta_df = read.csv("causal_gene_result.CSV")
-sum(is.na(meta_df$Validation.beta))
-meta_df$tmp = meta_df$IVW.WM.MR.test.β*meta_df$Validation.beta
+sum(is.na(meta_df$beta_validation))
+meta_df$tmp = meta_df$beta*meta_df$beta_validation
 
 sig_gene = meta_df
-colnames(sig_gene)[5:7] = c("imagen_beta","imagen_se","imagen_p")
-colnames(sig_gene)[11:13] = c("gtex_beta","gtex_se","gtex_p")
+colnames(sig_gene)[7:10] = c("imagen_beta","imagen_OR","imagen_se","imagen_p")
+colnames(sig_gene)[14:16] = c("gtex_beta","gtex_se","gtex_p")
 sig_gene$imagen_z = sig_gene$imagen_beta/sig_gene$imagen_se
 sig_gene$gtex_z = sig_gene$gtex_beta/sig_gene$gtex_se
-sig_gene$imagen_nobs = 591
+sig_gene$imagen_nobs = 545
 sig_gene$gtex_nobs = 488
 
 sig_gene=sig_gene%>%

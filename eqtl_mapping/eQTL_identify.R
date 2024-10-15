@@ -31,8 +31,8 @@ snp_pos$chr = as.character(gsub("chr","",snp_pos$chr))
 
 # eqtl of chr 1
 cis_result = data.frame()
-load("snpchr/snpchr1.Rdata")
-load("prefilter.Rdata")
+load("./snpchr/snpchr1.Rdata")
+load("./prefilter.Rdata")
 snpchr1 = as.data.frame(snpchr1)
 use_snp = snpchr1[ids]
 rm(snpchr1)
@@ -45,6 +45,7 @@ for (i in 1:dim(gene_chr_i)[1]){
   tmp_gene_pos = gene_chr_i$pos[i]
   tmp_cis_snp = subset(snp_chr_i,abs(snp_chr_i$pos-tmp_gene_pos)<1e6)
   tmp_cis_snp_id = tmp_cis_snp$snpid
+  # tmp_cisdata = use_snp[tmp_cis_snp_id,]
   tmp_cisdata = subset(use_snp,rownames(use_snp) %in% tmp_cis_snp_id)
   tmp_cisdata = as.data.frame(t(tmp_cisdata))
   print(i)
@@ -63,7 +64,7 @@ for (i in 1:dim(gene_chr_i)[1]){
 save(cis_result,file="cis_result1.Rdata")
 
 # combine
-load("eqtl_mapping/cis_result1.Rdata")
+load("cis_result1.Rdata")
 eqtl_my = cis_result
 colnames(eqtl_my) = c("probe","rsid","beta","se","t-value","p-value")
 for (i in 2:22){
@@ -72,6 +73,7 @@ for (i in 2:22){
   colnames(cis_result) = c("probe","rsid","beta","se","t-value","p-value")
   eqtl_my = rbind(eqtl_my,cis_result)
 }
+dim(subset(eqtl_my,eqtl_my$`p-value`<1e-4))
 probe_gene = data.frame("probe"=gene_pos$probe_id,"gene"=gene_pos$gene)
 eqtl_my = left_join(eqtl_my,probe_gene)
 eqtl_my$pair = paste(eqtl_my$gene,eqtl_my$rsid,sep="_")
@@ -124,29 +126,3 @@ eqtl_valid = data.frame(eqtl$gene_name,eqtl$rsid,eqtl$pair,eqtl$slope,eqtl$slope
 colnames(eqtl_valid) = c("gene","rsid","pair","beta","se","p-value","variant_id")
 colnames(eqtl_my)[2] = "rsid"
 colnames(eqtl_my)[5] = "se"
-
-# calculate standard deviation of SNP data and gene expression data
-sd_snp_df = data.frame("rsid"=character(0),sd_SNP=numeric(0))
-for (i in 1:22){
-  print(i)
-  load(paste0("snpchr/snpchr",i,".Rdata"))
-  tmpsnp = get(paste0("snpchr",i))
-  sd_i = apply(tmpsnp[,colnames(tmpsnp) %in% ids],1,sd,na.rm=TRUE)
-  sd_i_df = data.frame(rsid=names(sd_i),sd_SNP=as.numeric(sd_i))
-  sd_snp_df = rbind(sd_snp_df, sd_i_df)
-  rm(list=paste0("snpchr",i))
-}
-load("eqtl_mapping/prefilter.Rdata")
-load("eqtl_mapping/recalculate.Rdata")
-use_probe = gene_pos$probe_id
-gene_residual = gene_res
-rownames(gene_df) <- gene_df$Subject
-gene_df <- gene_df[, -1]
-gene_res = gene_df[,colnames(gene_df) %in% use_probe]
-df = gene_res
-sd_gene = apply(df,2,sd,na.rm=TRUE)
-sd_gene_df = data.frame(probe=names(sd_gene),sd_gene=as.numeric(sd_gene))
-# normalize beta
-eqtl_my = left_join(left_join(eqtl_my,sd_snp_df),sd_gene_df)
-eqtl_my$adjust_beta = eqtl_my$beta*eqtl_my$sd_SNP/eqtl_my$sd_gene
-eqtl_my$adjust_se = eqtl_my$se*eqtl_my$sd_SNP/eqtl_my$sd_gene
